@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  password     String
+  roleId       String
+  role         Role          @relation(fields: [roleId], references: [id])
+  createdAt    DateTime      @default(now())
+
+  // Relaciones
+  projects     Project[]     @relation("OwnerProjects")
+  assignedTasks Task[]       @relation("AssignedTasks")
+  comments     Comment[]
+  notifications Notification[]
+}
+
+model Role {
+  id          String          @id @default(uuid())
+  name        String          @unique
+  createdAt   DateTime        @default(now())
+
+  // Relaciones
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String          @id @default(uuid())
+  action      String          @unique
+  createdAt   DateTime        @default(now())
+
+  // Relaciones
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role         Role      @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  createdAt   DateTime      @default(now())
+
+  // Relaciones
+  owner       User          @relation("OwnerProjects", fields: [ownerId], references: [id])
+  tasks       Task[]
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model Task {
+  id           String       @id @default(uuid())
+  title        String
+  description  String?
+  status       TaskStatus   @default(TODO)
+  dueDate      DateTime?
+  projectId    String
+  assignedToId String?
+
+  createdAt    DateTime     @default(now())
+
+  // Relaciones
+  project      Project      @relation(fields: [projectId], references: [id])
+  assignedTo   User?        @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  comments     Comment[]
+}
+
+model Comment {
+  id        String     @id @default(uuid())
+  content   String
+  taskId    String
+  userId    String
+  createdAt DateTime   @default(now())
+
+  // Relaciones
+  task      Task       @relation(fields: [taskId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String     @id @default(uuid())
+  userId    String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime   @default(now())
+
+  // Relaciones
+  user      User       @relation(fields: [userId], references: [id])
+}
